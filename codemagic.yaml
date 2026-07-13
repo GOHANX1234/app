@@ -1,16 +1,15 @@
 workflows:
 
-  # ── Debug APK (push to main / develop) ────────────────────────────────────
+  # â”€â”€ Debug APK (push to main / develop) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  # Debug builds use Android's built-in debug keystore automatically.
+  # No code signing setup required in Codemagic UI.
   android-debug:
     name: Sarrows Android Debug
     max_build_duration: 60
     instance_type: mac_mini_m2
 
     environment:
-      android_signing:
-        - sarrows_keystore        # add in Codemagic → Code signing → Android
-      groups:
-        - sarrows_env             # optional env-var group in Codemagic UI
+      # No android_signing block â€” debug keystore is auto-applied by AGP
       vars:
         PACKAGE_NAME: "com.sarrows.app"
         ANDROID_NDK_VERSION: "27.0.12077973"
@@ -65,21 +64,27 @@ workflows:
           success: true
           failure: true
 
-  # ── Release APK + AAB (push a v* tag) ─────────────────────────────────────
+  # â”€â”€ Release APK + AAB (push a v* tag) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  # Keystore is auto-generated from environment variables set in Codemagic UI.
+  # Required env vars (add under Environment variables in Codemagic UI):
+  #   KEY_ALIAS        â€“ e.g. sarrows
+  #   KEY_PASSWORD     â€“ strong password for the key
+  #   STORE_PASSWORD   â€“ strong password for the keystore file
+  #   OWNER_NAME       â€“ your name / org name (CN field)
   android-release:
     name: Sarrows Android Release
     max_build_duration: 60
     instance_type: mac_mini_m2
 
     environment:
-      android_signing:
-        - sarrows_keystore
+      # No android_signing block â€” keystore is generated in the script below
       groups:
-        - sarrows_env
+        - sarrows_release_env       # group containing the 4 vars above
       vars:
         PACKAGE_NAME: "com.sarrows.app"
         ANDROID_NDK_VERSION: "27.0.12077973"
         ANDROID_CMAKE_VERSION: "3.22.1"
+        KEYSTORE_PATH: "/tmp/sarrows-release.keystore"
       java: 17
 
     triggering:
@@ -101,6 +106,20 @@ workflows:
             "cmake;$ANDROID_CMAKE_VERSION" \
             --sdk_root="$ANDROID_SDK_ROOT"
 
+      - name: Generate release keystore
+        script: |
+          keytool -genkeypair \
+            -v \
+            -keystore "$KEYSTORE_PATH" \
+            -alias "$KEY_ALIAS" \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass "$STORE_PASSWORD" \
+            -keypass "$KEY_PASSWORD" \
+            -dname "CN=$OWNER_NAME, OU=Android, O=Sarrows, L=Unknown, S=Unknown, C=US"
+          echo "Keystore generated at $KEYSTORE_PATH"
+
       - name: Set up local.properties
         script: |
           echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/local.properties"
@@ -114,14 +133,22 @@ workflows:
             --no-daemon \
             --stacktrace \
             -Pandroid.useAndroidX=true \
-            -PANDROID_NDK_HOME="$ANDROID_SDK_ROOT/ndk/$ANDROID_NDK_VERSION"
+            -PANDROID_NDK_HOME="$ANDROID_SDK_ROOT/ndk/$ANDROID_NDK_VERSION" \
+            -Pandroid.injected.signing.store.file="$KEYSTORE_PATH" \
+            -Pandroid.injected.signing.store.password="$STORE_PASSWORD" \
+            -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
 
       - name: Build Release AAB (Play Store)
         script: |
           ./gradlew bundleRelease \
             --no-daemon \
             -Pandroid.useAndroidX=true \
-            -PANDROID_NDK_HOME="$ANDROID_SDK_ROOT/ndk/$ANDROID_NDK_VERSION"
+            -PANDROID_NDK_HOME="$ANDROID_SDK_ROOT/ndk/$ANDROID_NDK_VERSION" \
+            -Pandroid.injected.signing.store.file="$KEYSTORE_PATH" \
+            -Pandroid.injected.signing.store.password="$STORE_PASSWORD" \
+            -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
 
     artifacts:
       - app/build/outputs/apk/release/**/*.apk
@@ -130,10 +157,6 @@ workflows:
       - app/build/outputs/logs/**
 
     publishing:
-      google_play:
-        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
-        track: internal
-        submit_as_draft: true
       email:
         recipients:
           - team@sarrows.app
