@@ -1,15 +1,12 @@
 workflows:
 
   # â”€â”€ Debug APK (push to main / develop) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  # Debug builds use Android's built-in debug keystore automatically.
-  # No code signing setup required in Codemagic UI.
   android-debug:
     name: Sarrows Android Debug
     max_build_duration: 60
     instance_type: mac_mini_m2
 
     environment:
-      # No android_signing block â€” debug keystore is auto-applied by AGP
       vars:
         PACKAGE_NAME: "com.sarrows.app"
         ANDROID_NDK_VERSION: "27.0.12077973"
@@ -26,6 +23,11 @@ workflows:
           include: true
 
     scripts:
+      - name: Set up sdkmanager PATH
+        script: |
+          export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/cmdline-tools/tools/bin:$PATH"
+          echo "PATH=$PATH" >> $CM_ENV
+
       - name: Accept Android SDK licenses
         script: |
           yes | sdkmanager --licenses >/dev/null 2>&1 || true
@@ -65,26 +67,25 @@ workflows:
           failure: true
 
   # â”€â”€ Release APK + AAB (push a v* tag) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  # Keystore is auto-generated from environment variables set in Codemagic UI.
-  # Required env vars (add under Environment variables in Codemagic UI):
-  #   KEY_ALIAS        â€“ e.g. sarrows
-  #   KEY_PASSWORD     â€“ strong password for the key
-  #   STORE_PASSWORD   â€“ strong password for the keystore file
-  #   OWNER_NAME       â€“ your name / org name (CN field)
+  # Keystore is auto-generated â€” no env vars or Codemagic code-signing setup needed.
+  # Optionally override defaults by setting these in Codemagic UI â†’ Environment variables:
+  #   KEY_ALIAS, KEY_PASSWORD, STORE_PASSWORD, OWNER_NAME
   android-release:
     name: Sarrows Android Release
     max_build_duration: 60
     instance_type: mac_mini_m2
 
     environment:
-      # No android_signing block â€” keystore is generated in the script below
-      groups:
-        - sarrows_release_env       # group containing the 4 vars above
       vars:
         PACKAGE_NAME: "com.sarrows.app"
         ANDROID_NDK_VERSION: "27.0.12077973"
         ANDROID_CMAKE_VERSION: "3.22.1"
         KEYSTORE_PATH: "/tmp/sarrows-release.keystore"
+        # Defaults â€” override in Codemagic UI if desired, but not required
+        KEY_ALIAS: "sarrows"
+        KEY_PASSWORD: "Sarrows@Key2025"
+        STORE_PASSWORD: "Sarrows@Store2025"
+        OWNER_NAME: "Sarrows"
       java: 17
 
     triggering:
@@ -95,6 +96,11 @@ workflows:
           include: true
 
     scripts:
+      - name: Set up sdkmanager PATH
+        script: |
+          export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/cmdline-tools/tools/bin:$PATH"
+          echo "PATH=$PATH" >> $CM_ENV
+
       - name: Accept Android SDK licenses
         script: |
           yes | sdkmanager --licenses >/dev/null 2>&1 || true
