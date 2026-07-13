@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Sarrows</string>
+    <string name="app_description">Stream unlimited movies, anime and series</string>
+    <string name="login">Sign In</string>
+    <string name="signup">Create Account</string>
+    <string name="logout">Sign Out</string>
+    <string name="watch_now">Watch Now</string>
+    <string name="add_watchlist">Add to Watchlist</string>
+    <string name="remove_watchlist">Remove from Watchlist</string>
+    <string name="loading">Loading…</string>
+    <string name="error_generic">Something went wrong. Please try again.</string>
+    <string name="error_network">Network error. Check your connection.</string>
+    <string name="error_auth">Please sign in to continue.</string>
+</resources>

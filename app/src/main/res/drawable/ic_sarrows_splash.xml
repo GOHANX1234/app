@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- S letter for Sarrows in red -->
+    <path
+        android:fillColor="#E50914"
+        android:pathData="M 30,28 C 30,28 60,26 68,34 C 76,42 64,50 50,52 C 36,54 24,60 28,72 C 32,84 60,82 80,80"
+        android:strokeColor="#E50914"
+        android:strokeWidth="10"
+        android:strokeLineCap="round" />
+    <!-- Arrow shape -->
+    <path
+        android:fillColor="#E50914"
+        android:pathData="M 52,60 L 72,60 L 62,50 M 72,60 L 62,70"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

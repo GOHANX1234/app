@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Base Sarrows dark theme -->
+    <style name="Theme.Sarrows" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="android:windowBackground">@color/sarrows_black</item>
+        <item name="android:statusBarColor">@color/sarrows_black</item>
+        <item name="android:navigationBarColor">@color/sarrows_black</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
+
+    <!-- Splash screen theme -->
+    <style name="Theme.Sarrows.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/sarrows_black</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_sarrows_splash</item>
+        <item name="postSplashScreenTheme">@style/Theme.Sarrows</item>
+    </style>
+
+    <!-- Player Activity (full-screen, no action bar) -->
+    <style name="Theme.Sarrows.Player" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="android:windowBackground">@color/sarrows_black</item>
+        <item name="android:statusBarColor">@color/sarrows_black</item>
+        <item name="android:navigationBarColor">@color/sarrows_black</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

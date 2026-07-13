@@ -1,0 +1,142 @@
+workflows:
+
+  # ── Debug APK (push to main / develop) ────────────────────────────────────
+  android-debug:
+    name: Sarrows Android Debug
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+
+    environment:
+      android_signing:
+        - sarrows_keystore        # add in Codemagic → Code signing → Android
+      groups:
+        - sarrows_env             # optional env-var group in Codemagic UI
+      vars:
+        PACKAGE_NAME: "com.sarrows.app"
+        ANDROID_NDK_VERSION: "27.0.12077973"
+        ANDROID_CMAKE_VERSION: "3.22.1"
+      java: 17
+
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: "main"
+          include: true
+        - pattern: "develop"
+          include: true
+
+    scripts:
+      - name: Accept Android SDK licenses
+        script: |
+          yes | sdkmanager --licenses >/dev/null 2>&1 || true
+
+      - name: Install NDK and CMake
+        script: |
+          sdkmanager \
+            "ndk;$ANDROID_NDK_VERSION" \
+            "cmake;$ANDROID_CMAKE_VERSION" \
+            --sdk_root="$ANDROID_SDK_ROOT"
+
+      - name: Set up local.properties
+        script: |
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/local.properties"
+
+      - name: Make gradlew executable
+        script: chmod +x gradlew
+
+      - name: Build Debug APK
+        script: |
+          ./gradlew assembleDebug \
+            --no-daemon \
+            --stacktrace \
+            -Pandroid.useAndroidX=true \
+            -PANDROID_NDK_HOME="$ANDROID_SDK_ROOT/ndk/$ANDROID_NDK_VERSION"
+
+    artifacts:
+      - app/build/outputs/apk/debug/**/*.apk
+      - app/build/outputs/logs/**
+
+    publishing:
+      email:
+        recipients:
+          - team@sarrows.app
+        notify:
+          success: true
+          failure: true
+
+  # ── Release APK + AAB (push a v* tag) ─────────────────────────────────────
+  android-release:
+    name: Sarrows Android Release
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+
+    environment:
+      android_signing:
+        - sarrows_keystore
+      groups:
+        - sarrows_env
+      vars:
+        PACKAGE_NAME: "com.sarrows.app"
+        ANDROID_NDK_VERSION: "27.0.12077973"
+        ANDROID_CMAKE_VERSION: "3.22.1"
+      java: 17
+
+    triggering:
+      events:
+        - tag
+      tag_patterns:
+        - pattern: "v*"
+          include: true
+
+    scripts:
+      - name: Accept Android SDK licenses
+        script: |
+          yes | sdkmanager --licenses >/dev/null 2>&1 || true
+
+      - name: Install NDK and CMake
+        script: |
+          sdkmanager \
+            "ndk;$ANDROID_NDK_VERSION" \
+            "cmake;$ANDROID_CMAKE_VERSION" \
+            --sdk_root="$ANDROID_SDK_ROOT"
+
+      - name: Set up local.properties
+        script: |
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/local.properties"
+
+      - name: Make gradlew executable
+        script: chmod +x gradlew
+
+      - name: Build Release APK
+        script: |
+          ./gradlew assembleRelease \
+            --no-daemon \
+            --stacktrace \
+            -Pandroid.useAndroidX=true \
+            -PANDROID_NDK_HOME="$ANDROID_SDK_ROOT/ndk/$ANDROID_NDK_VERSION"
+
+      - name: Build Release AAB (Play Store)
+        script: |
+          ./gradlew bundleRelease \
+            --no-daemon \
+            -Pandroid.useAndroidX=true \
+            -PANDROID_NDK_HOME="$ANDROID_SDK_ROOT/ndk/$ANDROID_NDK_VERSION"
+
+    artifacts:
+      - app/build/outputs/apk/release/**/*.apk
+      - app/build/outputs/bundle/release/**/*.aab
+      - app/build/outputs/mapping/release/mapping.txt
+      - app/build/outputs/logs/**
+
+    publishing:
+      google_play:
+        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        track: internal
+        submit_as_draft: true
+      email:
+        recipients:
+          - team@sarrows.app
+        notify:
+          success: true
+          failure: true
