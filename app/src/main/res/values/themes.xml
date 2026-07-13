@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Base Sarrows dark theme -->
-    <style name="Theme.Sarrows" parent="Theme.Material3.Dark.NoActionBar">
+    <!-- Base Sarrows dark theme.
+         Uses AppCompat (always available via activity-compose transitive dep).
+         Theme.Material3.Dark.NoActionBar requires the view-based material library
+         which is NOT included in a pure Compose project. -->
+    <style name="Theme.Sarrows" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="android:windowBackground">@color/sarrows_black</item>
         <item name="android:statusBarColor">@color/sarrows_black</item>
         <item name="android:navigationBarColor">@color/sarrows_black</item>
@@ -17,7 +20,7 @@
     </style>
 
     <!-- Player Activity (full-screen, no action bar) -->
-    <style name="Theme.Sarrows.Player" parent="Theme.Material3.Dark.NoActionBar">
+    <style name="Theme.Sarrows.Player" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="android:windowBackground">@color/sarrows_black</item>
         <item name="android:statusBarColor">@color/sarrows_black</item>
         <item name="android:navigationBarColor">@color/sarrows_black</item>
