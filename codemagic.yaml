@@ -11,6 +11,7 @@ workflows:
         PACKAGE_NAME: "com.sarrows.app"
         ANDROID_NDK_VERSION: "27.0.12077973"
         ANDROID_CMAKE_VERSION: "3.22.1"
+        GRADLE_VERSION: "8.7"
       java: 17
 
     triggering:
@@ -38,6 +39,14 @@ workflows:
             "ndk;$ANDROID_NDK_VERSION" \
             "cmake;$ANDROID_CMAKE_VERSION" \
             --sdk_root="$ANDROID_SDK_ROOT"
+
+      - name: Download gradle-wrapper.jar
+        script: |
+          mkdir -p gradle/wrapper
+          curl -fsSL \
+            "https://github.com/gradle/gradle/raw/refs/tags/v${GRADLE_VERSION}.0/gradle/wrapper/gradle-wrapper.jar" \
+            -o gradle/wrapper/gradle-wrapper.jar
+          echo "gradle-wrapper.jar downloaded ($(wc -c < gradle/wrapper/gradle-wrapper.jar) bytes)"
 
       - name: Set up local.properties
         script: |
@@ -67,9 +76,6 @@ workflows:
           failure: true
 
   # â”€â”€ Release APK + AAB (push a v* tag) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  # Keystore is auto-generated â€” no env vars or Codemagic code-signing setup needed.
-  # Optionally override defaults by setting these in Codemagic UI â†’ Environment variables:
-  #   KEY_ALIAS, KEY_PASSWORD, STORE_PASSWORD, OWNER_NAME
   android-release:
     name: Sarrows Android Release
     max_build_duration: 60
@@ -80,8 +86,8 @@ workflows:
         PACKAGE_NAME: "com.sarrows.app"
         ANDROID_NDK_VERSION: "27.0.12077973"
         ANDROID_CMAKE_VERSION: "3.22.1"
+        GRADLE_VERSION: "8.7"
         KEYSTORE_PATH: "/tmp/sarrows-release.keystore"
-        # Defaults â€” override in Codemagic UI if desired, but not required
         KEY_ALIAS: "sarrows"
         KEY_PASSWORD: "Sarrows@Key2025"
         STORE_PASSWORD: "Sarrows@Store2025"
@@ -111,6 +117,14 @@ workflows:
             "ndk;$ANDROID_NDK_VERSION" \
             "cmake;$ANDROID_CMAKE_VERSION" \
             --sdk_root="$ANDROID_SDK_ROOT"
+
+      - name: Download gradle-wrapper.jar
+        script: |
+          mkdir -p gradle/wrapper
+          curl -fsSL \
+            "https://github.com/gradle/gradle/raw/refs/tags/v${GRADLE_VERSION}.0/gradle/wrapper/gradle-wrapper.jar" \
+            -o gradle/wrapper/gradle-wrapper.jar
+          echo "gradle-wrapper.jar downloaded ($(wc -c < gradle/wrapper/gradle-wrapper.jar) bytes)"
 
       - name: Generate release keystore
         script: |
