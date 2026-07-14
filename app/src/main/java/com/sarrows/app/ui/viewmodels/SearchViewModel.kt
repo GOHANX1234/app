@@ -35,17 +35,23 @@ class SearchViewModel @Inject constructor(
             return
         }
         searchJob = viewModelScope.launch {
-            delay(350) // debounce
+            delay(350) // debounce â€” CancellationException from cancel() propagates normally here
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            when (val result = repository.search(q.trim())) {
-                is ApiResult.Success -> _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    movies = result.data.movies,
-                    series = result.data.series
-                )
-                is ApiResult.Error -> _uiState.value = _uiState.value.copy(
-                    isLoading = false, error = result.message
-                )
+            try {
+                when (val result = repository.search(q.trim())) {
+                    is ApiResult.Success -> _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        movies    = result.data.movies,
+                        series    = result.data.series
+                    )
+                    is ApiResult.Error -> _uiState.value = _uiState.value.copy(
+                        isLoading = false, error = result.message
+                    )
+                }
+            } catch (e: CancellationException) {
+                throw e  // always re-throw CancellationException so coroutine machinery works
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(isLoading = false, error = e.message ?: "Search failed")
             }
         }
     }
