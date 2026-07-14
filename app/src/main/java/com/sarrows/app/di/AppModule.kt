@@ -1,7 +1,7 @@
 package com.sarrows.app.di
 
 import android.content.Context
-import com.sarrows.app.data.native.NativeSecurity
+import com.sarrows.app.data.ndk.NativeSecurity
 import com.sarrows.app.data.remote.SarrowsApiClient
 import dagger.Module
 import dagger.Provides
