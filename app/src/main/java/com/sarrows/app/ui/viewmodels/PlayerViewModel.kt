@@ -32,12 +32,16 @@ class PlayerViewModel @Inject constructor(
     fun loadMovie(id: String) {
         viewModelScope.launch {
             _uiState.value = PlayerUiState.Loading
-            _uiState.value = when (val result = repository.resolveMoviePlayback(id)) {
-                is PlaybackResult.Stream -> PlayerUiState.StreamReady(result.url, result.cookieHeader)
-                is PlaybackResult.Embed  -> PlayerUiState.EmbedReady(result.url)
-                is PlaybackResult.Error  -> PlayerUiState.Error(result.message)
-                is PlaybackResult.Unauthenticated -> PlayerUiState.Unauthenticated
-                is PlaybackResult.RateLimited -> PlayerUiState.RateLimited
+            try {
+                _uiState.value = when (val result = repository.resolveMoviePlayback(id)) {
+                    is PlaybackResult.Stream        -> PlayerUiState.StreamReady(result.url, result.cookieHeader)
+                    is PlaybackResult.Embed         -> PlayerUiState.EmbedReady(result.url)
+                    is PlaybackResult.Error         -> PlayerUiState.Error(result.message)
+                    is PlaybackResult.Unauthenticated -> PlayerUiState.Unauthenticated
+                    is PlaybackResult.RateLimited   -> PlayerUiState.RateLimited
+                }
+            } catch (e: Exception) {
+                _uiState.value = PlayerUiState.Error(e.message ?: "Playback failed")
             }
         }
     }
@@ -45,24 +49,30 @@ class PlayerViewModel @Inject constructor(
     fun loadEpisode(id: String) {
         viewModelScope.launch {
             _uiState.value = PlayerUiState.Loading
-            _uiState.value = when (val result = repository.resolveEpisodePlayback(id)) {
-                is PlaybackResult.Stream -> PlayerUiState.StreamReady(result.url, result.cookieHeader)
-                is PlaybackResult.Embed  -> PlayerUiState.EmbedReady(result.url)
-                is PlaybackResult.Error  -> PlayerUiState.Error(result.message)
-                is PlaybackResult.Unauthenticated -> PlayerUiState.Unauthenticated
-                is PlaybackResult.RateLimited -> PlayerUiState.RateLimited
+            try {
+                _uiState.value = when (val result = repository.resolveEpisodePlayback(id)) {
+                    is PlaybackResult.Stream        -> PlayerUiState.StreamReady(result.url, result.cookieHeader)
+                    is PlaybackResult.Embed         -> PlayerUiState.EmbedReady(result.url)
+                    is PlaybackResult.Error         -> PlayerUiState.Error(result.message)
+                    is PlaybackResult.Unauthenticated -> PlayerUiState.Unauthenticated
+                    is PlaybackResult.RateLimited   -> PlayerUiState.RateLimited
+                }
+            } catch (e: Exception) {
+                _uiState.value = PlayerUiState.Error(e.message ?: "Playback failed")
             }
         }
     }
 
     fun saveProgress(targetType: String, targetId: String, progressSeconds: Int) {
         viewModelScope.launch {
-            repository.saveProgress(targetType, targetId, progressSeconds)
+            try { repository.saveProgress(targetType, targetId, progressSeconds) } catch (_: Exception) { }
         }
     }
 
     fun recordView(targetType: String, targetId: String) {
-        viewModelScope.launch { repository.recordView(targetType, targetId) }
+        viewModelScope.launch {
+            try { repository.recordView(targetType, targetId) } catch (_: Exception) { }
+        }
     }
 
     override fun onCleared() {
