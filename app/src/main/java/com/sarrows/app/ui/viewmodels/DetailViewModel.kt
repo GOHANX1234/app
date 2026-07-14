@@ -36,23 +36,27 @@ class DetailViewModel @Inject constructor(
         currentUserId = userId
         viewModelScope.launch {
             _uiState.value = DetailUiState(isLoading = true)
-            val movieDef    = async { repository.getMovieById(id) }
-            val reviewsDef  = async { repository.getReviews("Movie", id) }
-            val watchlistDef = async { repository.getWatchlistStatus("Movie", id) }
+            try {
+                val movieDef     = async { repository.getMovieById(id) }
+                val reviewsDef   = async { repository.getReviews("Movie", id) }
+                val watchlistDef = async { repository.getWatchlistStatus("Movie", id) }
 
-            val movie = (movieDef.await() as? ApiResult.Success)?.data
-            val reviews = (reviewsDef.await() as? ApiResult.Success)?.data ?: emptyList()
-            val inWatchlist = (watchlistDef.await() as? ApiResult.Success)?.data ?: false
-            val userReview = reviews.find { it.user.id == userId }
+                val movie       = (movieDef.await()     as? ApiResult.Success)?.data
+                val reviews     = (reviewsDef.await()   as? ApiResult.Success)?.data ?: emptyList()
+                val inWatchlist = (watchlistDef.await() as? ApiResult.Success)?.data ?: false
+                val userReview  = reviews.find { it.user.id == userId }
 
-            _uiState.value = DetailUiState(
-                isLoading = false,
-                movie = movie,
-                reviews = reviews,
-                inWatchlist = inWatchlist,
-                userReview = userReview,
-                error = if (movie == null) "Content not found" else null
-            )
+                _uiState.value = DetailUiState(
+                    isLoading   = false,
+                    movie       = movie,
+                    reviews     = reviews,
+                    inWatchlist = inWatchlist,
+                    userReview  = userReview,
+                    error       = if (movie == null) "Content not found" else null
+                )
+            } catch (e: Exception) {
+                _uiState.value = DetailUiState(isLoading = false, error = e.message ?: "Failed to load content")
+            }
         }
     }
 
@@ -60,48 +64,60 @@ class DetailViewModel @Inject constructor(
         currentUserId = userId
         viewModelScope.launch {
             _uiState.value = DetailUiState(isLoading = true)
-            val reviewsDef   = async { repository.getReviews("Series", series.id) }
-            val watchlistDef = async { repository.getWatchlistStatus("Series", series.id) }
+            try {
+                val reviewsDef   = async { repository.getReviews("Series", series.id) }
+                val watchlistDef = async { repository.getWatchlistStatus("Series", series.id) }
 
-            val reviews = (reviewsDef.await() as? ApiResult.Success)?.data ?: emptyList()
-            val inWatchlist = (watchlistDef.await() as? ApiResult.Success)?.data ?: false
-            val userReview = reviews.find { it.user.id == userId }
+                val reviews     = (reviewsDef.await()   as? ApiResult.Success)?.data ?: emptyList()
+                val inWatchlist = (watchlistDef.await() as? ApiResult.Success)?.data ?: false
+                val userReview  = reviews.find { it.user.id == userId }
 
-            _uiState.value = DetailUiState(
-                isLoading = false,
-                series = series,
-                reviews = reviews,
-                inWatchlist = inWatchlist,
-                userReview = userReview
-            )
+                _uiState.value = DetailUiState(
+                    isLoading   = false,
+                    series      = series,
+                    reviews     = reviews,
+                    inWatchlist = inWatchlist,
+                    userReview  = userReview
+                )
+            } catch (e: Exception) {
+                _uiState.value = DetailUiState(isLoading = false, error = e.message ?: "Failed to load content")
+            }
         }
     }
 
     fun toggleWatchlist(targetType: String, targetId: String) {
         viewModelScope.launch {
-            when (val result = repository.toggleWatchlist(targetType, targetId)) {
-                is ApiResult.Success -> _uiState.value = _uiState.value.copy(inWatchlist = result.data)
-                is ApiResult.Error -> { /* silently fail */ }
-            }
+            try {
+                when (val result = repository.toggleWatchlist(targetType, targetId)) {
+                    is ApiResult.Success -> _uiState.value = _uiState.value.copy(inWatchlist = result.data)
+                    is ApiResult.Error   -> { /* silently fail */ }
+                }
+            } catch (_: Exception) { /* silently fail */ }
         }
     }
 
     fun submitReview(targetType: String, targetId: String, rating: Int, comment: String?) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(reviewSubmitting = true, reviewError = null)
-            when (val result = repository.submitReview(targetType, targetId, rating, comment)) {
-                is ApiResult.Success -> {
-                    val reviews = _uiState.value.reviews.toMutableList()
-                    val idx = reviews.indexOfFirst { it.id == result.data.id }
-                    if (idx >= 0) reviews[idx] = result.data else reviews.add(0, result.data)
-                    _uiState.value = _uiState.value.copy(
-                        reviewSubmitting = false,
-                        reviews = reviews,
-                        userReview = result.data
+            try {
+                when (val result = repository.submitReview(targetType, targetId, rating, comment)) {
+                    is ApiResult.Success -> {
+                        val reviews = _uiState.value.reviews.toMutableList()
+                        val idx = reviews.indexOfFirst { it.id == result.data.id }
+                        if (idx >= 0) reviews[idx] = result.data else reviews.add(0, result.data)
+                        _uiState.value = _uiState.value.copy(
+                            reviewSubmitting = false,
+                            reviews          = reviews,
+                            userReview       = result.data
+                        )
+                    }
+                    is ApiResult.Error -> _uiState.value = _uiState.value.copy(
+                        reviewSubmitting = false, reviewError = result.message
                     )
                 }
-                is ApiResult.Error -> _uiState.value = _uiState.value.copy(
-                    reviewSubmitting = false, reviewError = result.message
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    reviewSubmitting = false, reviewError = e.message ?: "Failed to submit review"
                 )
             }
         }
@@ -109,17 +125,21 @@ class DetailViewModel @Inject constructor(
 
     fun deleteReview(reviewId: String) {
         viewModelScope.launch {
-            when (repository.deleteReview(reviewId)) {
-                is ApiResult.Success -> {
-                    val reviews = _uiState.value.reviews.filter { it.id != reviewId }
-                    _uiState.value = _uiState.value.copy(reviews = reviews, userReview = null)
+            try {
+                when (repository.deleteReview(reviewId)) {
+                    is ApiResult.Success -> {
+                        val reviews = _uiState.value.reviews.filter { it.id != reviewId }
+                        _uiState.value = _uiState.value.copy(reviews = reviews, userReview = null)
+                    }
+                    is ApiResult.Error -> { /* ignore */ }
                 }
-                is ApiResult.Error -> { /* ignore */ }
-            }
+            } catch (_: Exception) { /* ignore */ }
         }
     }
 
     fun recordView(targetType: String, targetId: String) {
-        viewModelScope.launch { repository.recordView(targetType, targetId) }
+        viewModelScope.launch {
+            try { repository.recordView(targetType, targetId) } catch (_: Exception) { }
+        }
     }
 }
