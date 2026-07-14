@@ -1,7 +1,7 @@
 package com.sarrows.app.data.remote
 
 import com.sarrows.app.data.models.*
-import com.sarrows.app.data.native.NativeSecurity
+import com.sarrows.app.data.ndk.NativeSecurity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -24,7 +24,7 @@ class SarrowsApiClient @Inject constructor(
 
     private val json = Json { ignoreUnknownKeys = true; coerceInputValues = true }
 
-    // ── Internal request helpers ─────────────────────────────────────────────
+    // â”€â”€ Internal request helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     private fun buildRequest(url: String, method: String = "GET", body: RequestBody? = null): Request {
         val headers = nativeSecurity.buildAuthHeadersMap()
@@ -67,7 +67,7 @@ class SarrowsApiClient @Inject constructor(
         }
     }
 
-    // ── Auth ─────────────────────────────────────────────────────────────────
+    // â”€â”€ Auth â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     suspend fun getCsrfToken(): ApiResult<String> {
         val req = buildRequest("$BASE/api/auth/csrf")
@@ -149,7 +149,7 @@ class SarrowsApiClient @Inject constructor(
         return if (code in 200..302) ApiResult.Success(Unit) else ApiResult.Error("Logout failed", code)
     }
 
-    // ── Movies ───────────────────────────────────────────────────────────────
+    // â”€â”€ Movies â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     suspend fun getMovies(page: Int = 1, limit: Int = 24, sort: String = "latest",
                           genre: String? = null, year: Int? = null): ApiResult<MoviesResponse> {
@@ -169,7 +169,7 @@ class SarrowsApiClient @Inject constructor(
         else errorFrom(code, body)
     }
 
-    // ── Anime / Series ────────────────────────────────────────────────────────
+    // â”€â”€ Anime / Series â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     suspend fun getSeries(type: String = "anime", page: Int = 1, limit: Int = 24,
                           sort: String = "latest", genre: String? = null,
@@ -184,7 +184,7 @@ class SarrowsApiClient @Inject constructor(
         return if (code == 200) ApiResult.Success(parseBody(body)) else errorFrom(code, body)
     }
 
-    // ── Episodes ──────────────────────────────────────────────────────────────
+    // â”€â”€ Episodes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     suspend fun getEpisodeById(id: String): ApiResult<Episode> {
         val (code, body) = execute(buildRequest("$BASE/api/episodes/$id"))
@@ -192,7 +192,7 @@ class SarrowsApiClient @Inject constructor(
         else errorFrom(code, body)
     }
 
-    // ── Search ────────────────────────────────────────────────────────────────
+    // â”€â”€ Search â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     suspend fun search(query: String): ApiResult<SearchResponse> {
         val url = "$BASE/api/search?q=${query.trim().take(100).encodeUrl()}"
@@ -200,7 +200,7 @@ class SarrowsApiClient @Inject constructor(
         return if (code == 200) ApiResult.Success(parseBody(body)) else errorFrom(code, body)
     }
 
-    // ── Streaming ─────────────────────────────────────────────────────────────
+    // â”€â”€ Streaming â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     /** Returns a stream URL (HLS / direct) or null if embed type. */
     suspend fun resolveMoviePlayback(id: String): PlaybackResult {
@@ -245,7 +245,7 @@ class SarrowsApiClient @Inject constructor(
         }
     }
 
-    // ── Reviews ───────────────────────────────────────────────────────────────
+    // â”€â”€ Reviews â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     suspend fun getReviews(targetType: String, targetId: String): ApiResult<List<Review>> {
         val url = "$BASE/api/reviews?targetType=$targetType&targetId=$targetId"
@@ -270,7 +270,7 @@ class SarrowsApiClient @Inject constructor(
         return if (code == 200) ApiResult.Success(Unit) else errorFrom(code, body)
     }
 
-    // ── Watchlist ─────────────────────────────────────────────────────────────
+    // â”€â”€ Watchlist â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     suspend fun getWatchlistStatus(targetType: String, targetId: String): ApiResult<Boolean> {
         val url = "$BASE/api/watchlist?targetType=$targetType&targetId=$targetId"
@@ -288,7 +288,7 @@ class SarrowsApiClient @Inject constructor(
         else errorFrom(code, body)
     }
 
-    // ── Watch history ─────────────────────────────────────────────────────────
+    // â”€â”€ Watch history â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     suspend fun saveProgress(targetType: String, targetId: String, progressSeconds: Int): ApiResult<Unit> {
         val payload = json.encodeToString(WatchHistoryRequest.serializer(),
@@ -298,7 +298,7 @@ class SarrowsApiClient @Inject constructor(
         return if (code == 200) ApiResult.Success(Unit) else ApiResult.Error("Failed to save progress", code)
     }
 
-    // ── Views ─────────────────────────────────────────────────────────────────
+    // â”€â”€ Views â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     suspend fun recordView(targetType: String, targetId: String): ApiResult<Unit> {
         val payload = json.encodeToString(ViewRequest.serializer(), ViewRequest(targetType, targetId))
@@ -307,7 +307,7 @@ class SarrowsApiClient @Inject constructor(
         return if (code == 200) ApiResult.Success(Unit) else ApiResult.Error("View record failed", code)
     }
 
-    // ── Content Requests ──────────────────────────────────────────────────────
+    // â”€â”€ Content Requests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     suspend fun submitRequest(title: String, type: String, note: String?): ApiResult<ContentRequest> {
         val payload = json.encodeToString(ContentRequestBody.serializer(),
@@ -330,7 +330,7 @@ class SarrowsApiClient @Inject constructor(
         return if (code == 200) ApiResult.Success(Unit) else errorFrom(code, body)
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     private fun buildUrl(base: String, params: Map<String, String>): String {
         val query = params.filter { it.value.isNotEmpty() }
