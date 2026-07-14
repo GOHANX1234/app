@@ -31,12 +31,18 @@ class RequestsViewModel @Inject constructor(
     fun loadRequests() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            when (val result = repository.getMyRequests()) {
-                is ApiResult.Success -> _uiState.value = _uiState.value.copy(
-                    isLoading = false, requests = result.data
-                )
-                is ApiResult.Error -> _uiState.value = _uiState.value.copy(
-                    isLoading = false, error = result.message
+            try {
+                when (val result = repository.getMyRequests()) {
+                    is ApiResult.Success -> _uiState.value = _uiState.value.copy(
+                        isLoading = false, requests = result.data
+                    )
+                    is ApiResult.Error -> _uiState.value = _uiState.value.copy(
+                        isLoading = false, error = result.message
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false, error = e.message ?: "Failed to load requests"
                 )
             }
         }
@@ -49,16 +55,20 @@ class RequestsViewModel @Inject constructor(
         }
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isSubmitting = true, submitError = null)
-            when (val result = repository.submitRequest(title.trim(), type, note?.takeIf { it.isNotBlank() })) {
-                is ApiResult.Success -> {
-                    _uiState.value = _uiState.value.copy(
-                        isSubmitting = false,
+            try {
+                when (val result = repository.submitRequest(title.trim(), type, note?.takeIf { it.isNotBlank() })) {
+                    is ApiResult.Success -> _uiState.value = _uiState.value.copy(
+                        isSubmitting  = false,
                         submitSuccess = true,
-                        requests = listOf(result.data) + _uiState.value.requests
+                        requests      = listOf(result.data) + _uiState.value.requests
+                    )
+                    is ApiResult.Error -> _uiState.value = _uiState.value.copy(
+                        isSubmitting = false, submitError = result.message
                     )
                 }
-                is ApiResult.Error -> _uiState.value = _uiState.value.copy(
-                    isSubmitting = false, submitError = result.message
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isSubmitting = false, submitError = e.message ?: "Failed to submit request"
                 )
             }
         }
@@ -66,12 +76,14 @@ class RequestsViewModel @Inject constructor(
 
     fun cancelRequest(requestId: String) {
         viewModelScope.launch {
-            when (repository.cancelRequest(requestId)) {
-                is ApiResult.Success -> _uiState.value = _uiState.value.copy(
-                    requests = _uiState.value.requests.filter { it.id != requestId }
-                )
-                is ApiResult.Error -> { /* ignore */ }
-            }
+            try {
+                when (repository.cancelRequest(requestId)) {
+                    is ApiResult.Success -> _uiState.value = _uiState.value.copy(
+                        requests = _uiState.value.requests.filter { it.id != requestId }
+                    )
+                    is ApiResult.Error -> { /* ignore */ }
+                }
+            } catch (_: Exception) { /* ignore */ }
         }
     }
 
