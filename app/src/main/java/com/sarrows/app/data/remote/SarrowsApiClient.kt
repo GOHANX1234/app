@@ -49,14 +49,26 @@ class SarrowsApiClient @Inject constructor(
     }
 
     private suspend fun execute(request: Request): Pair<Int, String> = withContext(Dispatchers.IO) {
-        okHttpClient.newCall(request).execute().use { resp ->
-            parseSetCookies(resp)
-            resp.code to (resp.body?.string() ?: "")
+        try {
+            okHttpClient.newCall(request).execute().use { resp ->
+                parseSetCookies(resp)
+                resp.code to (resp.body?.string() ?: "")
+            }
+        } catch (e: Exception) {
+            // Network failure (no connectivity, timeout, SSL error, etc.)
+            -1 to (e.message ?: "Network error")
         }
     }
 
     private inline fun <reified T> parseBody(body: String): T =
         json.decodeFromString(body)
+
+    /** Returns null instead of throwing if body is not valid JSON for T. */
+    private inline fun <reified T> safeParseBody(body: String): T? = try {
+        json.decodeFromString(body)
+    } catch (_: Exception) {
+        null
+    }
 
     private fun errorFrom(code: Int, body: String): ApiResult.Error {
         return try {
@@ -202,46 +214,59 @@ class SarrowsApiClient @Inject constructor(
 
     // â”€â”€ Streaming â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-    /** Returns a stream URL (HLS / direct) or null if embed type. */
+    /**
+     * Probes the stream endpoint with HEAD (no body downloaded) to determine
+     * whether content is a direct/HLS stream or an embed iframe.
+     *
+     * API strategy (Â§9.6):
+     *   HEAD /api/stream/movie/:id  â†’ 200 = stream, 400 = embed type, 401 = unauthed, 429 = rate limited
+     *   If embed â†’ GET /api/stream/movie/:id/embed â†’ { url }
+     */
+    private fun buildHeadRequest(url: String): Request {
+        val builder = Request.Builder().url(url).head()
+        nativeSecurity.buildAuthHeadersMap().forEach { (k, v) -> builder.header(k, v) }
+        val cookie = nativeSecurity.nativeBuildCookieHeader()
+        if (cookie.isNotEmpty()) builder.header("Cookie", cookie)
+        return builder.build()
+    }
+
     suspend fun resolveMoviePlayback(id: String): PlaybackResult {
-        if (!nativeSecurity.nativeCheckStreamRateLimit()) {
-            return PlaybackResult.RateLimited
-        }
+        if (!nativeSecurity.nativeCheckStreamRateLimit()) return PlaybackResult.RateLimited
         val streamUrl = nativeSecurity.nativeMovieStreamUrl(id)
-        val req = buildRequest(streamUrl)
-        val (code, body) = execute(req)
+        val (code, _) = execute(buildHeadRequest(streamUrl))
         nativeSecurity.nativeRecordStreamRequest()
-        return when {
-            code == 200 -> PlaybackResult.Stream(streamUrl, nativeSecurity.nativeBuildCookieHeader())
-            code == 400 -> {
+        return when (code) {
+            200, 206 -> PlaybackResult.Stream(streamUrl, nativeSecurity.nativeBuildCookieHeader())
+            400 -> {
                 val embedUrl = nativeSecurity.nativeMovieEmbedUrl(id)
                 val (ec, eb) = execute(buildRequest(embedUrl))
-                if (ec == 200) PlaybackResult.Embed(parseBody<EmbedUrlResponse>(eb).url)
-                else PlaybackResult.Error("Could not resolve playback", ec)
+                val parsed = safeParseBody<EmbedUrlResponse>(eb)
+                if (ec == 200 && parsed != null) PlaybackResult.Embed(parsed.url)
+                else PlaybackResult.Error("Could not resolve embed", ec)
             }
-            code == 401 -> PlaybackResult.Unauthenticated
-            else -> PlaybackResult.Error(body, code)
+            401      -> PlaybackResult.Unauthenticated
+            429      -> PlaybackResult.RateLimited
+            else     -> PlaybackResult.Error("Stream probe failed ($code)", code)
         }
     }
 
     suspend fun resolveEpisodePlayback(id: String): PlaybackResult {
-        if (!nativeSecurity.nativeCheckStreamRateLimit()) {
-            return PlaybackResult.RateLimited
-        }
+        if (!nativeSecurity.nativeCheckStreamRateLimit()) return PlaybackResult.RateLimited
         val streamUrl = nativeSecurity.nativeEpisodeStreamUrl(id)
-        val req = buildRequest(streamUrl)
-        val (code, body) = execute(req)
+        val (code, _) = execute(buildHeadRequest(streamUrl))
         nativeSecurity.nativeRecordStreamRequest()
-        return when {
-            code == 200 -> PlaybackResult.Stream(streamUrl, nativeSecurity.nativeBuildCookieHeader())
-            code == 400 -> {
+        return when (code) {
+            200, 206 -> PlaybackResult.Stream(streamUrl, nativeSecurity.nativeBuildCookieHeader())
+            400 -> {
                 val embedUrl = nativeSecurity.nativeEpisodeEmbedUrl(id)
                 val (ec, eb) = execute(buildRequest(embedUrl))
-                if (ec == 200) PlaybackResult.Embed(parseBody<EmbedUrlResponse>(eb).url)
-                else PlaybackResult.Error("Could not resolve playback", ec)
+                val parsed = safeParseBody<EmbedUrlResponse>(eb)
+                if (ec == 200 && parsed != null) PlaybackResult.Embed(parsed.url)
+                else PlaybackResult.Error("Could not resolve embed", ec)
             }
-            code == 401 -> PlaybackResult.Unauthenticated
-            else -> PlaybackResult.Error(body, code)
+            401      -> PlaybackResult.Unauthenticated
+            429      -> PlaybackResult.RateLimited
+            else     -> PlaybackResult.Error("Stream probe failed ($code)", code)
         }
     }
 
