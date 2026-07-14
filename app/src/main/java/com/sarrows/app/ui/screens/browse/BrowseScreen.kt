@@ -45,17 +45,11 @@ fun BrowseScreen(
         bottomBar = { SarrowsBottomNavBar(navController) },
         topBar = {
             Column(modifier = Modifier.background(SarrowsDark)) {
-                // Tab row
+                // Tab row â€” contentColor drives the default underline indicator colour
                 TabRow(
                     selectedTabIndex = tabs.indexOf(selectedTab),
                     containerColor   = SarrowsDark,
-                    contentColor     = SarrowsRed,
-                    indicator = { tabPositions ->
-                        TabRowDefaults.SecondaryIndicator(
-                            modifier = Modifier.tabIndicatorOffset(tabPositions[tabs.indexOf(selectedTab)]),
-                            color = SarrowsRed
-                        )
-                    }
+                    contentColor     = SarrowsRed
                 ) {
                     tabs.forEachIndexed { i, t ->
                         Tab(
