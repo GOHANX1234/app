@@ -118,7 +118,8 @@ class SarrowsApiClient @Inject constructor(
             .url("$BASE/api/auth/callback/credentials")
             .post(formBody.toRequestBody(FORM_MEDIA))
             .header("Content-Type", "application/x-www-form-urlencoded")
-            .header("Origin", BASE)
+            .header("Accept",  "application/json")
+            .header("Origin",  BASE)
             .header("Referer", "$BASE/login")
             .header("User-Agent", "SarrowsAndroid/1.0")
             .also { builder ->
@@ -126,13 +127,43 @@ class SarrowsApiClient @Inject constructor(
                 if (cookie.isNotEmpty()) builder.header("Cookie", cookie)
             }
             .build()
-        val (code, body) = execute(req)
 
-        // NextAuth returns 200 for both success and failure
-        return if (code == 200 && !body.contains("error=")) {
-            ApiResult.Success(Unit)
-        } else {
-            ApiResult.Error("Invalid email or password", code)
+        // NextAuth v5 always returns 302 (ignores redirect=false in form body).
+        // We MUST disable OkHttp's automatic redirect-following so we receive the
+        // 302 response directly and can parse the Set-Cookie header that carries
+        // __Secure-authjs.session-token before it is discarded by the redirect.
+        val noRedirectClient = okHttpClient.newBuilder()
+            .followRedirects(false)
+            .followSslRedirects(false)
+            .build()
+
+        return withContext(Dispatchers.IO) {
+            try {
+                noRedirectClient.newCall(req).execute().use { resp ->
+                    // Parse cookies NOW, from the 302 response that has the session token.
+                    parseSetCookies(resp)
+
+                    val location = resp.header("Location") ?: ""
+                    when {
+                        // 302 redirect to / without error = successful login
+                        resp.code in 301..303 && !location.contains("error=") ->
+                            ApiResult.Success(Unit)
+                        // 302 redirect back to /login?error=â€¦ = bad credentials
+                        resp.code in 301..303 && location.contains("error=") ->
+                            ApiResult.Error("Invalid email or password", resp.code)
+                        // Unexpected 200 body (future-proofing)
+                        resp.code == 200 ->
+                            if (!resp.body?.string().orEmpty().contains("error="))
+                                ApiResult.Success(Unit)
+                            else
+                                ApiResult.Error("Invalid email or password", resp.code)
+                        else ->
+                            ApiResult.Error("Login failed (${resp.code})", resp.code)
+                    }
+                }
+            } catch (e: Exception) {
+                ApiResult.Error(e.message ?: "Network error", -1)
+            }
         }
     }
 
