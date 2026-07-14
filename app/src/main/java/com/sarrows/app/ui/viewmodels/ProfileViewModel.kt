@@ -28,13 +28,17 @@ class ProfileViewModel @Inject constructor(
     fun loadProfile() {
         viewModelScope.launch {
             _uiState.value = ProfileUiState(isLoading = true)
-            when (val result = repository.getSession()) {
-                is ApiResult.Success -> _uiState.value = ProfileUiState(
-                    isLoading = false, user = result.data.user
-                )
-                is ApiResult.Error -> _uiState.value = ProfileUiState(
-                    isLoading = false, error = result.message
-                )
+            try {
+                when (val result = repository.getSession()) {
+                    is ApiResult.Success -> _uiState.value = ProfileUiState(
+                        isLoading = false, user = result.data.user
+                    )
+                    is ApiResult.Error -> _uiState.value = ProfileUiState(
+                        isLoading = false, error = result.message
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.value = ProfileUiState(isLoading = false, error = e.message ?: "Failed to load profile")
             }
         }
     }
