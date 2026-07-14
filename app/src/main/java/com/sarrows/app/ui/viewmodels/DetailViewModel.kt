@@ -60,6 +60,30 @@ class DetailViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Entry point when navigating to a series/anime detail via route (only type + id are
+     * available). Looks up the full Series object from the API and delegates to loadSeries().
+     */
+    fun loadSeriesById(id: String, userId: String?) {
+        currentUserId = userId
+        viewModelScope.launch {
+            _uiState.value = DetailUiState(isLoading = true)
+            try {
+                val series = repository.findSeriesById(id)
+                if (series != null) {
+                    loadSeries(series, userId)
+                } else {
+                    _uiState.value = DetailUiState(isLoading = false, error = "Content not found")
+                }
+            } catch (e: Exception) {
+                _uiState.value = DetailUiState(
+                    isLoading = false,
+                    error = e.message ?: "Failed to load content"
+                )
+            }
+        }
+    }
+
     fun loadSeries(series: Series, userId: String?) {
         currentUserId = userId
         viewModelScope.launch {
