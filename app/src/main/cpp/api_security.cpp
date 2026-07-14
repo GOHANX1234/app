@@ -36,11 +36,12 @@ void ApiSecurity::clearCsrfToken() {
 
 std::unordered_map<std::string, std::string> ApiSecurity::buildAuthHeaders() const {
     std::unordered_map<std::string, std::string> headers;
-    headers["Accept"]       = "application/json";
-    headers["Content-Type"] = "application/json";
-    headers["Origin"]       = BASE_URL;
-    headers["Referer"]      = BASE_URL + "/";
-    headers["User-Agent"]   = "SarrowsAndroid/1.0";
+    // Do NOT include Content-Type here â€” it varies per request method/body.
+    // Callers set Content-Type themselves when sending a body (POST/PUT).
+    headers["Accept"]     = "application/json";
+    headers["Origin"]     = BASE_URL;
+    headers["Referer"]    = BASE_URL + "/";
+    headers["User-Agent"] = "SarrowsAndroid/1.0";
 
     auto cookie = cookieManager_->buildCookieHeader();
     if (!cookie.empty()) {
