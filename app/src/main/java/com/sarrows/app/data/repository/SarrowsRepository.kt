@@ -46,6 +46,23 @@ class SarrowsRepository @Inject constructor(
 
     suspend fun getEpisodeById(id: String) = api.getEpisodeById(id)
 
+    /**
+     * No dedicated /api/anime/:id endpoint exists. We fetch page 1 (large limit) of both
+     * anime and series lists and return the first match. Caller should prefer passing the
+     * full Series object via ContentStore when available to avoid this round-trip.
+     */
+    suspend fun findSeriesById(id: String): Series? {
+        val tryAnime = api.getSeries(type = "anime", limit = 50)
+        if (tryAnime is ApiResult.Success) {
+            tryAnime.data.series.firstOrNull { it.id == id }?.let { return it }
+        }
+        val trySeries = api.getSeries(type = "series", limit = 50)
+        if (trySeries is ApiResult.Success) {
+            trySeries.data.series.firstOrNull { it.id == id }?.let { return it }
+        }
+        return null
+    }
+
     // â”€â”€ Search â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     suspend fun search(query: String) = api.search(query)
