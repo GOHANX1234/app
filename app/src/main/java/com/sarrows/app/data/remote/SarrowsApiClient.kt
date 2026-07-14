@@ -85,9 +85,14 @@ class SarrowsApiClient @Inject constructor(
         val req = buildRequest("$BASE/api/auth/csrf")
         val (code, body) = execute(req)
         return if (code == 200) {
-            val csrf = parseBody<CsrfResponse>(body).csrfToken
-            nativeSecurity.nativeStoreCsrfToken(csrf)
-            ApiResult.Success(csrf)
+            val parsed = safeParseBody<CsrfResponse>(body)
+            if (parsed != null) {
+                nativeSecurity.nativeStoreCsrfToken(parsed.csrfToken)
+                ApiResult.Success(parsed.csrfToken)
+            } else {
+                // Server returned a non-JSON or null body â€” likely a transient error; surface it clearly.
+                ApiResult.Error("Could not retrieve login token â€” please try again", code)
+            }
         } else errorFrom(code, body)
     }
 
@@ -135,7 +140,8 @@ class SarrowsApiClient @Inject constructor(
         val req = buildRequest("$BASE/api/auth/session")
         val (code, body) = execute(req)
         return if (code == 200) {
-            val session = parseBody<SessionResponse>(body)
+            // Unauthenticated returns "{}" which is valid; "null" or HTML must not crash.
+            val session = safeParseBody<SessionResponse>(body) ?: SessionResponse(user = null)
             ApiResult.Success(session)
         } else errorFrom(code, body)
     }
