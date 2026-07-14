@@ -9,8 +9,9 @@
 
 namespace sarrows {
 
-// Cookie names we care about
-static const char* SESSION_COOKIE = "authjs.session-token";
+// Cookie names we care about.
+// NextAuth v5 uses the __Secure- prefix for the session cookie on HTTPS origins.
+static const char* SESSION_COOKIE = "__Secure-authjs.session-token";
 
 CookieManager::CookieManager(const std::string& encryptionKey)
     : encryptionKey_(encryptionKey) {}
