@@ -34,17 +34,23 @@ class BrowseViewModel @Inject constructor(
     fun loadMovies(page: Int = 1, sort: String = "latest", genre: String? = null) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            when (val result = repository.getMovies(page, sort, genre)) {
-                is ApiResult.Success -> _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    movies = if (page == 1) result.data.movies
-                    else _uiState.value.movies + result.data.movies,
-                    currentPage = result.data.page,
-                    totalPages = result.data.totalPages,
-                    sortBy = sort,
-                    genreFilter = genre
-                )
-                is ApiResult.Error -> _uiState.value = _uiState.value.copy(isLoading = false, error = result.message)
+            try {
+                when (val result = repository.getMovies(page, sort, genre)) {
+                    is ApiResult.Success -> _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        movies = if (page == 1) result.data.movies
+                        else _uiState.value.movies + result.data.movies,
+                        currentPage = result.data.page,
+                        totalPages = result.data.totalPages,
+                        sortBy = sort,
+                        genreFilter = genre
+                    )
+                    is ApiResult.Error -> _uiState.value = _uiState.value.copy(
+                        isLoading = false, error = result.message
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(isLoading = false, error = e.message ?: "Failed to load movies")
             }
         }
     }
@@ -52,15 +58,21 @@ class BrowseViewModel @Inject constructor(
     fun loadAnime(page: Int = 1, sort: String = "latest", genre: String? = null, status: String? = null) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            when (val result = repository.getAnime(page, sort, genre, status)) {
-                is ApiResult.Success -> _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    anime = if (page == 1) result.data.series
-                    else _uiState.value.anime + result.data.series,
-                    currentPage = result.data.page,
-                    totalPages = result.data.totalPages
-                )
-                is ApiResult.Error -> _uiState.value = _uiState.value.copy(isLoading = false, error = result.message)
+            try {
+                when (val result = repository.getAnime(page, sort, genre, status)) {
+                    is ApiResult.Success -> _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        anime = if (page == 1) result.data.series
+                        else _uiState.value.anime + result.data.series,
+                        currentPage = result.data.page,
+                        totalPages = result.data.totalPages
+                    )
+                    is ApiResult.Error -> _uiState.value = _uiState.value.copy(
+                        isLoading = false, error = result.message
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(isLoading = false, error = e.message ?: "Failed to load anime")
             }
         }
     }
@@ -68,15 +80,21 @@ class BrowseViewModel @Inject constructor(
     fun loadSeries(page: Int = 1, sort: String = "latest", genre: String? = null, status: String? = null) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            when (val result = repository.getSeries(page, sort, genre, status)) {
-                is ApiResult.Success -> _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    series = if (page == 1) result.data.series
-                    else _uiState.value.series + result.data.series,
-                    currentPage = result.data.page,
-                    totalPages = result.data.totalPages
-                )
-                is ApiResult.Error -> _uiState.value = _uiState.value.copy(isLoading = false, error = result.message)
+            try {
+                when (val result = repository.getSeries(page, sort, genre, status)) {
+                    is ApiResult.Success -> _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        series = if (page == 1) result.data.series
+                        else _uiState.value.series + result.data.series,
+                        currentPage = result.data.page,
+                        totalPages = result.data.totalPages
+                    )
+                    is ApiResult.Error -> _uiState.value = _uiState.value.copy(
+                        isLoading = false, error = result.message
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(isLoading = false, error = e.message ?: "Failed to load series")
             }
         }
     }
