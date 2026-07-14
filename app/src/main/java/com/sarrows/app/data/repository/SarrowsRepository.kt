@@ -1,7 +1,7 @@
 package com.sarrows.app.data.repository
 
 import com.sarrows.app.data.models.*
-import com.sarrows.app.data.native.NativeSecurity
+import com.sarrows.app.data.ndk.NativeSecurity
 import com.sarrows.app.data.remote.PlaybackResult
 import com.sarrows.app.data.remote.SarrowsApiClient
 import javax.inject.Inject
@@ -12,7 +12,7 @@ class SarrowsRepository @Inject constructor(
     private val api: SarrowsApiClient,
     private val nativeSecurity: NativeSecurity
 ) {
-    // ── Auth ──────────────────────────────────────────────────────────────────
+    // â”€â”€ Auth â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     suspend fun signUp(nickname: String, email: String, password: String) =
         api.signUp(nickname, email, password)
@@ -26,7 +26,7 @@ class SarrowsRepository @Inject constructor(
 
     fun hasSession() = nativeSecurity.nativeHasSession()
 
-    // ── Movies ────────────────────────────────────────────────────────────────
+    // â”€â”€ Movies â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     suspend fun getMovies(page: Int = 1, sort: String = "latest",
                           genre: String? = null, year: Int? = null) =
@@ -34,7 +34,7 @@ class SarrowsRepository @Inject constructor(
 
     suspend fun getMovieById(id: String) = api.getMovieById(id)
 
-    // ── Anime / Series ────────────────────────────────────────────────────────
+    // â”€â”€ Anime / Series â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     suspend fun getAnime(page: Int = 1, sort: String = "latest",
                          genre: String? = null, status: String? = null) =
@@ -46,16 +46,16 @@ class SarrowsRepository @Inject constructor(
 
     suspend fun getEpisodeById(id: String) = api.getEpisodeById(id)
 
-    // ── Search ────────────────────────────────────────────────────────────────
+    // â”€â”€ Search â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     suspend fun search(query: String) = api.search(query)
 
-    // ── Streaming ─────────────────────────────────────────────────────────────
+    // â”€â”€ Streaming â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     suspend fun resolveMoviePlayback(id: String): PlaybackResult = api.resolveMoviePlayback(id)
     suspend fun resolveEpisodePlayback(id: String): PlaybackResult = api.resolveEpisodePlayback(id)
 
-    // ── Reviews ───────────────────────────────────────────────────────────────
+    // â”€â”€ Reviews â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     suspend fun getReviews(targetType: String, targetId: String) =
         api.getReviews(targetType, targetId)
@@ -65,7 +65,7 @@ class SarrowsRepository @Inject constructor(
 
     suspend fun deleteReview(reviewId: String) = api.deleteReview(reviewId)
 
-    // ── Watchlist ─────────────────────────────────────────────────────────────
+    // â”€â”€ Watchlist â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     suspend fun getWatchlistStatus(targetType: String, targetId: String) =
         api.getWatchlistStatus(targetType, targetId)
@@ -73,7 +73,7 @@ class SarrowsRepository @Inject constructor(
     suspend fun toggleWatchlist(targetType: String, targetId: String) =
         api.toggleWatchlist(targetType, targetId)
 
-    // ── History & Views ───────────────────────────────────────────────────────
+    // â”€â”€ History & Views â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     suspend fun saveProgress(targetType: String, targetId: String, progressSeconds: Int) =
         api.saveProgress(targetType, targetId, progressSeconds)
@@ -81,7 +81,7 @@ class SarrowsRepository @Inject constructor(
     suspend fun recordView(targetType: String, targetId: String) =
         api.recordView(targetType, targetId)
 
-    // ── Content Requests ──────────────────────────────────────────────────────
+    // â”€â”€ Content Requests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     suspend fun submitRequest(title: String, type: String, note: String?) =
         api.submitRequest(title, type, note)
