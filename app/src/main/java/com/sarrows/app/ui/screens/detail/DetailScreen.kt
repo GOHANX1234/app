@@ -49,10 +49,11 @@ fun DetailScreen(
     var expandDescription by remember { mutableStateOf(false) }
 
     LaunchedEffect(contentId, contentType) {
-        if (contentType == "movie") {
-            detailViewModel.loadMovie(contentId, currentUser?.id)
+        when (contentType) {
+            "movie" -> detailViewModel.loadMovie(contentId, currentUser?.id)
+            // No dedicated /api/anime/:id endpoint â€” look up the full Series object via browse API.
+            else    -> detailViewModel.loadSeriesById(contentId, currentUser?.id)
         }
-        // For series, we'd need the full object; handle via search or pass-through
     }
 
     if (uiState.isLoading) {
@@ -226,7 +227,7 @@ fun DetailScreen(
             item {
                 Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
                     Text(
-                        text = if (expandDescription) desc else desc.take(200) + if (desc.length > 200) "…" else "",
+                        text = if (expandDescription) desc else desc.take(200) + if (desc.length > 200) "â€¦" else "",
                         style = MaterialTheme.typography.bodyMedium, color = SarrowsWhite87
                     )
                     if (desc.length > 200) {
