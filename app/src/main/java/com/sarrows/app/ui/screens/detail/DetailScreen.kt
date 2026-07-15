@@ -29,6 +29,7 @@ import com.sarrows.app.ui.components.*
 import com.sarrows.app.ui.player.PlayerActivity
 import com.sarrows.app.ui.theme.*
 import com.sarrows.app.ui.viewmodels.*
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,6 +48,9 @@ fun DetailScreen(
     var reviewRating by remember { mutableStateOf(7) }
     var reviewComment by remember { mutableStateOf("") }
     var expandDescription by remember { mutableStateOf(false) }
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(contentId, contentType) {
         when (contentType) {
@@ -76,8 +80,43 @@ fun DetailScreen(
     val targetType = if (movie != null) "Movie" else "Series"
     val targetId   = movie?.id ?: series?.id ?: contentId
 
+    // For series: the first available episode to play (null when no episodes loaded yet)
+    val firstEpisode = series?.episodes?.firstOrNull()
+
     LaunchedEffect(targetId) {
         detailViewModel.recordView(targetType, targetId)
+    }
+
+    // Helper: launches the player for a movie or a specific episode.
+    // For series with no episodes loaded, shows a snackbar instead.
+    fun launchPlayer() {
+        when {
+            movie != null -> {
+                val intent = Intent(context, PlayerActivity::class.java).apply {
+                    putExtra("contentType", "movie")
+                    putExtra("contentId", targetId)
+                    putExtra("title", title)
+                }
+                context.startActivity(intent)
+            }
+            firstEpisode != null -> {
+                val epTitle = firstEpisode.title.ifEmpty {
+                    "S${firstEpisode.season} E${firstEpisode.episodeNumber}"
+                }
+                val intent = Intent(context, PlayerActivity::class.java).apply {
+                    putExtra("contentType", "episode")
+                    putExtra("contentId", firstEpisode.id)
+                    putExtra("title", epTitle)
+                }
+                context.startActivity(intent)
+            }
+            else -> {
+                // Series found but no episodes available from API yet
+                scope.launch {
+                    snackbarHostState.showSnackbar("No episodes available â€” select one from the list below")
+                }
+            }
+        }
     }
 
     Scaffold(
@@ -92,7 +131,8 @@ fun DetailScreen(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
         },
-        containerColor = SarrowsBlack
+        containerColor = SarrowsBlack,
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         LazyColumn(
             modifier = Modifier.fillMaxSize().background(SarrowsBlack),
@@ -115,21 +155,14 @@ fun DetailScreen(
                             )
                         )
                     )
-                    // Play button overlay
+                    // Play button overlay â€” for series, plays first episode (or shows snackbar)
                     Box(
                         modifier = Modifier.align(Alignment.Center).background(
                             SarrowsRed.copy(alpha = 0.9f), CircleShape
                         ).clip(CircleShape)
                     ) {
                         IconButton(
-                            onClick = {
-                                val intent = Intent(context, PlayerActivity::class.java).apply {
-                                    putExtra("contentType", if (movie != null) "movie" else "series")
-                                    putExtra("contentId", targetId)
-                                    putExtra("title", title)
-                                }
-                                context.startActivity(intent)
-                            },
+                            onClick = { launchPlayer() },
                             modifier = Modifier.size(64.dp)
                         ) {
                             Icon(Icons.Default.PlayArrow, "Play", tint = SarrowsWhite, modifier = Modifier.size(36.dp))
@@ -169,22 +202,15 @@ fun DetailScreen(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Play
+                    // Play / Watch button â€” for series, plays first episode
                     Button(
-                        onClick = {
-                            val intent = Intent(context, PlayerActivity::class.java).apply {
-                                putExtra("contentType", if (movie != null) "movie" else "series")
-                                putExtra("contentId", targetId)
-                                putExtra("title", title)
-                            }
-                            context.startActivity(intent)
-                        },
+                        onClick = { launchPlayer() },
                         modifier = Modifier.weight(1f).height(48.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = SarrowsRed)
                     ) {
                         Icon(Icons.Default.PlayArrow, null)
                         Spacer(Modifier.width(4.dp))
-                        Text("Watch")
+                        Text(if (movie != null || firstEpisode != null) "Watch" else "No Episodes")
                     }
                     // Watchlist
                     OutlinedButton(
@@ -254,14 +280,29 @@ fun DetailScreen(
                 }
             }
 
-            // Episodes (for series)
-            series?.episodes?.let { episodes ->
-                if (episodes.isNotEmpty()) {
+            // Episodes section (always shown for series/anime)
+            if (series != null) {
+                item {
+                    Spacer(Modifier.height(8.dp))
+                    SectionHeader(title = "Episodes (${series.episodes.size})")
+                }
+                if (series.episodes.isEmpty()) {
                     item {
-                        Spacer(Modifier.height(8.dp))
-                        SectionHeader(title = "Episodes")
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 20.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                "No episodes available yet",
+                                color = SarrowsWhite60,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
                     }
-                    items(episodes.take(20)) { ep ->
+                } else {
+                    items(series.episodes.take(20)) { ep ->
                         EpisodeItem(ep = ep, onPlay = {
                             val intent = Intent(context, PlayerActivity::class.java).apply {
                                 putExtra("contentType", "episode")
