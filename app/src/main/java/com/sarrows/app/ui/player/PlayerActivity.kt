@@ -76,8 +76,9 @@ fun PlayerScreen(
         when (contentType) {
             "movie"   -> playerViewModel.loadMovie(contentId)
             "episode" -> playerViewModel.loadEpisode(contentId)
-            "series"  -> playerViewModel.loadEpisode(contentId) // first episode
-            else      -> playerViewModel.loadMovie(contentId)
+            // "series" should never reach PlayerActivity directly â€” DetailScreen always
+            // resolves the first episode ID before launching. Guard here just in case.
+            else      -> playerViewModel.showError("No episode selected. Please tap an episode from the list.")
         }
     }
 
@@ -92,7 +93,7 @@ fun PlayerScreen(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     CircularProgressIndicator(color = SarrowsRed)
                     Spacer(Modifier.height(16.dp))
-                    Text("Loading stream…", color = SarrowsWhite60)
+                    Text("Loading streamâ€¦", color = SarrowsWhite60)
                 }
             }
 
