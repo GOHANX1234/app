@@ -90,7 +90,6 @@ class SarrowsApiClient @Inject constructor(
                 nativeSecurity.nativeStoreCsrfToken(parsed.csrfToken)
                 ApiResult.Success(parsed.csrfToken)
             } else {
-                // Server returned a non-JSON or null body â€” likely a transient error; surface it clearly.
                 ApiResult.Error("Could not retrieve login token â€” please try again", code)
             }
         } else errorFrom(code, body)
@@ -218,7 +217,7 @@ class SarrowsApiClient @Inject constructor(
         else errorFrom(code, body)
     }
 
-    // â”€â”€ Anime / Series â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // â”€â”€ Anime / Series â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     suspend fun getSeries(type: String = "anime", page: Int = 1, limit: Int = 24,
                           sort: String = "latest", genre: String? = null,
@@ -233,7 +232,21 @@ class SarrowsApiClient @Inject constructor(
         return if (code == 200) ApiResult.Success(parseBody(body)) else errorFrom(code, body)
     }
 
-    // â”€â”€ Episodes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    /**
+     * Fetches a single Series by MongoDB ID using the ?_id= filter on the list endpoint.
+     * Much faster than fetching 50 items to find one by ID.
+     * Returns null inside Success when the ID is not found; Error on network failure.
+     */
+    suspend fun getSeriesById(id: String): ApiResult<Series?> {
+        val url = buildUrl("$BASE/api/anime", mapOf("_id" to id))
+        val (code, body) = execute(buildRequest(url))
+        return if (code == 200) {
+            val response = safeParseBody<SeriesResponse>(body)
+            ApiResult.Success(response?.series?.firstOrNull())
+        } else errorFrom(code, body)
+    }
+
+    // â”€â”€ Episodes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     suspend fun getEpisodeById(id: String): ApiResult<Episode> {
         val (code, body) = execute(buildRequest("$BASE/api/episodes/$id"))
@@ -241,7 +254,7 @@ class SarrowsApiClient @Inject constructor(
         else errorFrom(code, body)
     }
 
-    // â”€â”€ Search â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // â”€â”€ Search â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     suspend fun search(query: String): ApiResult<SearchResponse> {
         val url = "$BASE/api/search?q=${query.trim().take(100).encodeUrl()}"
@@ -249,7 +262,7 @@ class SarrowsApiClient @Inject constructor(
         return if (code == 200) ApiResult.Success(parseBody(body)) else errorFrom(code, body)
     }
 
-    // â”€â”€ Streaming â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // â”€â”€ Streaming â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     /**
      * Probes the stream endpoint with HEAD (no body downloaded) to determine
