@@ -47,11 +47,23 @@ class SarrowsRepository @Inject constructor(
     suspend fun getEpisodeById(id: String) = api.getEpisodeById(id)
 
     /**
-     * No dedicated /api/anime/:id endpoint exists. We fetch page 1 (large limit) of both
-     * anime and series lists and return the first match. Caller should prefer passing the
-     * full Series object via ContentStore when available to avoid this round-trip.
+     * Fetches a single Series by ID.
+     *
+     * Strategy (fastest-first):
+     *  1. Try GET /api/anime?_id=:id â€” returns in one call if the server supports it.
+     *  2. Fall back to searching the first 50 anime, then first 50 series via the list
+     *     endpoint. Covers cases where the ?_id= filter isn't available or returns nothing.
+     *
+     * NOTE: The API list endpoint does NOT embed episode data inside Series objects.
+     * Episodes are returned only when the API is explicitly updated to include them.
+     * The Series.episodes list may always be empty; callers should handle that gracefully.
      */
     suspend fun findSeriesById(id: String): Series? {
+        // Fast path: single-item lookup via ?_id= filter
+        val byId = api.getSeriesById(id)
+        if (byId is ApiResult.Success && byId.data != null) return byId.data
+
+        // Fallback: scan first page of both types (covers edge cases / older API versions)
         val tryAnime = api.getSeries(type = "anime", limit = 50)
         if (tryAnime is ApiResult.Success) {
             tryAnime.data.series.firstOrNull { it.id == id }?.let { return it }
