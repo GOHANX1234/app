@@ -63,6 +63,11 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    /** Called when a series is opened without a specific episode â€” shows a safe error. */
+    fun showError(message: String) {
+        _uiState.value = PlayerUiState.Error(message)
+    }
+
     fun saveProgress(targetType: String, targetId: String, progressSeconds: Int) {
         viewModelScope.launch {
             try { repository.saveProgress(targetType, targetId, progressSeconds) } catch (_: Exception) { }
